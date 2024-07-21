@@ -19,7 +19,7 @@ const App = () => {
       setInput(transcript);
       sendMessage(transcript);
     }
-  }, [listening, transcript]);
+  }, [listening, transcript, sendMessage]);
 
   const sendMessage = async (message) => {
     setInput("");
