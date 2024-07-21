@@ -70,8 +70,7 @@ const App = () => {
           <div className="chat-box">
             <div className="messages">
               <div className="message bot-message">
-                Hi 👋, How can I assist you today? Fun fact: I'm faster than
-                Zwiggy and Somato because I deliver answers, not just food! 🍔😉
+                Hi 👋, How can I assist you today?
               </div>
               {messages.map((message, index) => (
                 <div
