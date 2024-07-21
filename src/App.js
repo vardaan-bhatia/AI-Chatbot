@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import SpeechRecognition, {
   useSpeechRecognition,
 } from "react-speech-recognition";
 import "./index.css";
+
 const App = () => {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState([]);
@@ -14,45 +15,49 @@ const App = () => {
     resetTranscript,
   } = useSpeechRecognition();
 
+  // Wrap sendMessage in useCallback
+  const sendMessage = useCallback(
+    async (message) => {
+      setInput("");
+      if (!message.trim()) return;
+
+      const userMessage = { sender: "user", text: message };
+      setMessages((prevMessages) => [...prevMessages, userMessage]);
+      console.log(process.env.REACT_APP_CHAT_KEY);
+
+      try {
+        const { data } = await axios({
+          url: `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${process.env.REACT_APP_CHAT_KEY}`,
+          method: "post",
+          data: {
+            contents: [{ parts: [{ text: message }] }],
+          },
+        });
+        const text = data.candidates?.[0]?.content?.parts[0]?.text;
+        const botMessage = {
+          sender: "bot",
+          text: text || "Error fetching response",
+        };
+        setMessages((prevMessages) => [...prevMessages, botMessage]);
+        resetTranscript();
+      } catch (error) {
+        console.error("Error generating content:", error);
+        setMessages((prevMessages) => [
+          ...prevMessages,
+          { sender: "bot", text: "Error fetching response" },
+        ]);
+        setInput("");
+      }
+    },
+    [resetTranscript]
+  );
+
   useEffect(() => {
     if (!listening && transcript) {
       setInput(transcript);
       sendMessage(transcript);
     }
   }, [listening, transcript, sendMessage]);
-
-  const sendMessage = async (message) => {
-    setInput("");
-    if (!message.trim()) return;
-
-    const userMessage = { sender: "user", text: message };
-    setMessages((prevMessages) => [...prevMessages, userMessage]);
-    console.log(process.env.REACT_APP_CHAT_KEY);
-
-    try {
-      const { data } = await axios({
-        url: `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${process.env.REACT_APP_CHAT_KEY}`,
-        method: "post",
-        data: {
-          contents: [{ parts: [{ text: message }] }],
-        },
-      });
-      const text = data.candidates?.[0]?.content?.parts[0]?.text;
-      const botMessage = {
-        sender: "bot",
-        text: text || "Error fetching response",
-      };
-      setMessages((prevMessages) => [...prevMessages, botMessage]);
-      resetTranscript();
-    } catch (error) {
-      console.error("Error generating content:", error);
-      setMessages((prevMessages) => [
-        ...prevMessages,
-        { sender: "bot", text: "Error fetching response" },
-      ]);
-      setInput("");
-    }
-  };
 
   const startListening = () => {
     SpeechRecognition.startListening({ continuous: false });
