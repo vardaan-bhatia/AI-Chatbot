@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect, useCallback } from "react";
 import React from "react";
 import axios from "axios";
 import "./index.css";
@@ -17,38 +17,41 @@ const App = () => {
     resetTranscript,
   } = useSpeechRecognition();
 
-  const fetchData = async (y) => {
-    settextMsg("");
-    if (y.trim() === "") return; // Use trim() to handle empty input
+  // Wrap fetchData in useCallback
+  const fetchData = useCallback(
+    async (y) => {
+      settextMsg("");
+      if (y.trim() === "") return; // Use trim() to handle empty input
 
-    const usersend = {
-      sender: "user",
-      text: y,
-      index: y.length,
-    };
-    SetResponse((prevmessage) => [...prevmessage, usersend]);
-
-    try {
-      const x = await axios.post(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${process.env.REACT_APP_CHAT_KEY}`,
-        {
-          contents: [{ parts: [{ text: y }] }],
-        }
-      );
-      const result = x.data.candidates?.[0]?.content?.parts[0]?.text;
-      const botresponse = {
-        sender: "bot",
-        text: result || "Error fetching response",
-        index: y.length + 1,
+      const usersend = {
+        sender: "user",
+        text: y,
+        index: y.length,
       };
-      SetResponse((prevmessage) => [...prevmessage, botresponse]);
-      resetTranscript();
-    } catch (error) {
-      console.error(error);
-    }
-  };
+      SetResponse((prevmessage) => [...prevmessage, usersend]);
 
-  // Now, use fetchData inside useEffect
+      try {
+        const x = await axios.post(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${process.env.REACT_APP_CHAT_KEY}`,
+          {
+            contents: [{ parts: [{ text: y }] }],
+          }
+        );
+        const result = x.data.candidates?.[0]?.content?.parts[0]?.text;
+        const botresponse = {
+          sender: "bot",
+          text: result || "Error fetching response",
+          index: y.length + 1,
+        };
+        SetResponse((prevmessage) => [...prevmessage, botresponse]);
+        resetTranscript();
+      } catch (error) {
+        console.error(error);
+      }
+    },
+    [resetTranscript]
+  );
+
   useEffect(() => {
     if (transcript) {
       settextMsg(transcript);
