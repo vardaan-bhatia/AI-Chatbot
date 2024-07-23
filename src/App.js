@@ -24,7 +24,7 @@ const App = () => {
     if (!listening && transcript) {
       fetchData(transcript);
     }
-  }, [transcript, listening]);
+  }, [transcript, listening, fetchData]);
 
   const fetchData = async (y) => {
     settextMsg("");
