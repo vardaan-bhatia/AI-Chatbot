@@ -17,15 +17,6 @@ const App = () => {
     resetTranscript,
   } = useSpeechRecognition();
 
-  useEffect(() => {
-    if (transcript) {
-      settextMsg(transcript);
-    }
-    if (!listening && transcript) {
-      fetchData(transcript);
-    }
-  }, [transcript, listening, fetchData]);
-
   const fetchData = async (y) => {
     settextMsg("");
     if (y.trim() === "") return; // Use trim() to handle empty input
@@ -56,6 +47,16 @@ const App = () => {
       console.error(error);
     }
   };
+
+  // Now, use fetchData inside useEffect
+  useEffect(() => {
+    if (transcript) {
+      settextMsg(transcript);
+    }
+    if (!listening && transcript) {
+      fetchData(transcript);
+    }
+  }, [transcript, listening, fetchData]);
 
   useEffect(() => {
     if (response.length > 0) {
