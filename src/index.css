@@ -1,3 +1,10 @@
+.center-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+
 .chat-container {
   width: 30%;
   display: flex;
@@ -44,6 +51,7 @@
   color: #333;
   align-self: flex-start;
   text-align: left;
+  padding: 5px;
 }
 
 .chat-input {

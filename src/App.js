@@ -1,13 +1,15 @@
-import React, { useState, useEffect, useCallback } from "react";
+import { useRef, useState, useEffect } from "react";
+import React from "react";
 import axios from "axios";
+import "./index.css";
 import SpeechRecognition, {
   useSpeechRecognition,
 } from "react-speech-recognition";
-import "./index.css";
 
 const App = () => {
-  const [input, setInput] = useState("");
-  const [messages, setMessages] = useState([]);
+  const [textMsg, settextMsg] = useState("");
+  const [response, SetResponse] = useState([]);
+  const messagescontainerref = useRef(null);
   const {
     transcript,
     browserSupportsSpeechRecognition,
@@ -15,100 +17,107 @@ const App = () => {
     resetTranscript,
   } = useSpeechRecognition();
 
-  // Wrap sendMessage in useCallback
-  const sendMessage = useCallback(
-    async (message) => {
-      setInput("");
-      if (!message.trim()) return;
+  useEffect(() => {
+    if (transcript) {
+      settextMsg(transcript);
+    }
+    if (!listening && transcript) {
+      fetchData(transcript);
+    }
+  }, [transcript, listening]);
 
-      const userMessage = { sender: "user", text: message };
-      setMessages((prevMessages) => [...prevMessages, userMessage]);
-      console.log(process.env.REACT_APP_CHAT_KEY);
+  const fetchData = async (y) => {
+    settextMsg("");
+    if (y.trim() === "") return; // Use trim() to handle empty input
 
-      try {
-        const { data } = await axios({
-          url: `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${process.env.REACT_APP_CHAT_KEY}`,
-          method: "post",
-          data: {
-            contents: [{ parts: [{ text: message }] }],
-          },
-        });
-        const text = data.candidates?.[0]?.content?.parts[0]?.text;
-        const botMessage = {
-          sender: "bot",
-          text: text || "Error fetching response",
-        };
-        setMessages((prevMessages) => [...prevMessages, botMessage]);
-        resetTranscript();
-      } catch (error) {
-        console.error("Error generating content:", error);
-        setMessages((prevMessages) => [
-          ...prevMessages,
-          { sender: "bot", text: "Error fetching response" },
-        ]);
-        setInput("");
-      }
-    },
-    [resetTranscript]
-  );
+    const usersend = {
+      sender: "user",
+      text: y,
+      index: y.length,
+    };
+    SetResponse((prevmessage) => [...prevmessage, usersend]);
+
+    try {
+      const x = await axios.post(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${process.env.REACT_APP_CHAT_KEY}`,
+        {
+          contents: [{ parts: [{ text: y }] }],
+        }
+      );
+      const result = x.data.candidates?.[0]?.content?.parts[0]?.text;
+      const botresponse = {
+        sender: "bot",
+        text: result || "Error fetching response",
+        index: y.length + 1,
+      };
+      SetResponse((prevmessage) => [...prevmessage, botresponse]);
+      resetTranscript();
+    } catch (error) {
+      console.error(error);
+    }
+  };
 
   useEffect(() => {
-    if (!listening && transcript) {
-      setInput(transcript);
-      sendMessage(transcript);
+    if (response.length > 0) {
+      const lastmessage = response[response.length - 1];
+      const lastindexmessage = messagescontainerref.current.querySelector(
+        `[data-index="${lastmessage.index}"]`
+      );
+      if (lastindexmessage) {
+        lastindexmessage.scrollIntoView({ behavior: "smooth" });
+      }
     }
-  }, [listening, transcript, sendMessage]);
+  }, [response]);
 
   const startListening = () => {
     SpeechRecognition.startListening({ continuous: false });
   };
 
   if (!browserSupportsSpeechRecognition) {
-    return <div>Your browser does not support speech recognition.</div>;
+    return <div>Your browser doesn't support speech recognition</div>;
   }
 
   return (
-    <>
-      <center>
-        <div className="chat-container">
-          <h1 style={{ marginRight: "15rem" }}>Chat with AI</h1>
-          <div className="chat-box">
-            <div className="messages">
-              <div className="message bot-message">
-                Hi 👋, How can I assist you today?
+    <div className="center-container">
+      <div className="chat-container">
+        <h1>Chat with AI</h1>
+        <div className="chat-box">
+          <div className="messages" ref={messagescontainerref}>
+            <div className="message bot-message">
+              Hi 👋, How can I assist you today?
+            </div>
+            {response.map((message, index) => (
+              <div
+                key={index}
+                data-index={message.index}
+                className={`message ${
+                  message.sender === "user" ? "user-message" : "bot-message"
+                }`}
+              >
+                {message.text}
               </div>
-              {messages.map((message, index) => (
-                <div
-                  key={index}
-                  className={`message ${
-                    message.sender === "user" ? "user-message" : "bot-message"
-                  }`}
-                >
-                  {message.text}
-                </div>
-              ))}
-            </div>
-            <div className="chat-input">
-              <input
-                type="text"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder="Ask me anything..."
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    sendMessage(input);
-                  }
-                }}
-              />
-              <button onClick={() => sendMessage(input)}>Send</button>
-              <button onClick={startListening}>
-                <i className="fa fa-microphone" aria-hidden="true"></i>
-              </button>
-            </div>
+            ))}
+          </div>
+          <div className="chat-input">
+            <input
+              value={textMsg}
+              type="text"
+              placeholder="Ask me anything..."
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  fetchData(textMsg);
+                }
+              }}
+              onChange={(e) => settextMsg(e.target.value)}
+            />
+            <button onClick={() => fetchData(textMsg)}>Send</button>
+            <button onClick={startListening}>
+              <i className="fa fa-microphone" aria-hidden="true"></i>
+            </button>
           </div>
         </div>
-      </center>
-    </>
+      </div>
+    </div>
   );
 };
 
