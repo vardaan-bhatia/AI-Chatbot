@@ -1,4 +1,4 @@
-# ChatBox Component
+# ChatBox 
 
 A simple, customizable chatbox component built with React and integrated with speech recognition. Users can interact with the chatbox via text input or voice commands.
 
